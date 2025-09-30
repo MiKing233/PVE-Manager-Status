@@ -18,7 +18,7 @@ PVE-Manager-Status 是一款强大的开源脚本工具, 通过实时基于动�
 
 ## 如何使用
 
-要使用本项目, 请通过 SSH 连接你的 Proxmox VE 节点, 并执行以下操作:
+要使用本项目, 请通过 SSH 以 root 身份连接你的 Proxmox VE 节点, 并执行以下操作:
 
 ```
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/MiKing233/PVE-Manager-Status/master/pve-manager-status.sh)"
