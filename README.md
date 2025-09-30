@@ -3,7 +3,7 @@
 
 无论是小型 HomeLab 还是多节点的大型集群, 借助 PVE-Manager-Status 让你对当前服务器硬件状态一目了然!
 
-PVE-Manager-Status 是一款强大的开源脚本工具, 通过实时基于动态颜色的关键指标, 帮助你直观的了解服务器各项硬件的负载和压力, 从而轻松掌握设备的实时运行状态以确保其稳定高效.
+PVE-Manager-Status 是一款强大的开源脚本工具, 通过实时基于动态颜色的关键指标显示, 帮助你直观的了解服务器各项硬件的负载和压力, 从而轻松掌握设备的实时运行状态以确保其稳定高效.
 
 <img width="1121" height="700" alt="image" src="https://github.com/user-attachments/assets/afe26e92-0637-472e-b323-bdc41935dfc0" />
 
