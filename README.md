@@ -48,14 +48,19 @@ apt install --reinstall pve-manager
 
 感谢以下来源和社区贡献, 本项目的诞生离不开源自这些来源和贡献:
 
+- https://github.com/shidahuilang/pve
+- https://github.com/xiangfeidexiaohuo/pve-diy
+- https://bbs.x86pi.com/thread?topicId=20
 - https://community-scripts.github.io/ProxmoxVE
 - https://github.com/community-scripts/ProxmoxVE
+- https://github.com/proxmox/pve-manager
+- https://github.com/Debian
 
 ## 许可证
 
 本项目为开源项目, 遵循 MIT License.
 
-这些设置按"原样"提供, 不提供任何担保, 也不授予任何权利. 您有责任安全地使用本工具, 并遵守软件许可协议的条款.
+这些代码按"原样"提供, 不提供任何担保, 也不授予任何权利. 您有责任安全地使用本工具, 并遵守软件许可协议的条款.
 
 ## Buy me a coffee
 
