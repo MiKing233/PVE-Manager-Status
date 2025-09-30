@@ -30,7 +30,7 @@ PVE-Manager-Status 是一款强大的开源脚本工具, 通过实时基于动�
 ## 支持
 
 - 适用于基于 Debian 12 'bookworm' 的 Proxmox VE 8.x 和基于 Debian 13 'trixie' 的 Proxmox VE 9.0.
-- 理论上支持 Proxmox VE 7.x 等旧版环境但未经过实际测试. 建议在您拥有完全权限和控制权的计算机上执行这些更改.
+- 理论上支持 Proxmox VE 7.x 等旧版环境但未经过实际测试. 您需要在拥有root权限的节点上运行该工具执行修改.
 - 在将脚本应用到实际环境之前, 最好先在测试环境进行测试, 若发生意外请通过下面的命令重新安装 pve-manager 来复原更改.
 ```
 apt install --reinstall pve-manager
