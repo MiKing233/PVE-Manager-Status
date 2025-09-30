@@ -3,13 +3,13 @@
 
 无论是小型 HomeLab 还是多节点的大型集群, 借助 PVE-Manager-Status 让你对当前服务器硬件状态了如指掌!
 
-PVE-Manager-Status 是一款强大的开源脚本工具, 通过实时基于动态颜色的关键指标显示, 帮助你直观的了解服务器各项硬件的负载和压力, 从而轻松掌握设备的实时运行状态以确保其稳定高效.
+PVE-Manager-Status 是一款强大的开源脚本工具, 通过实时基于动态颜色的关键指标显示, 帮助你直观的了解服务器各项硬件的负载和温度, 从而轻松掌握设备的实时运行状态以确保其稳定高效.
 
 <img width="1120" height="699" alt="image" src="https://github.com/user-attachments/assets/51224701-a763-4b14-9951-5990f7e22901" />
 
 ## 免责声明
 
-在任何正式或关键的生产环境中, 未经完整测试与评估, 严禁直接部署和运行本工具. 在使用本工具之前, 您务必对代码进行详尽的审查, 充分理解其运行机制, 使用该工具后的风险由您自行承担.
+在任何正式或关键的生产环境中, 未经完整测试与评估, 严禁直接部署和运行本工具. 在使用本工具之前, 您务必对代码进行详尽的审阅, 充分理解其运行机制, 使用该工具后的风险由您自行承担.
 
 ## 包含的功能
 
@@ -29,7 +29,7 @@ PVE-Manager-Status 是一款强大的开源脚本工具, 通过实时基于动�
 
 ## 支持
 
-- 适用于基于 Debian 12 'bookworm' 的 Proxmox VE 8.x 和基于 Debian 13 'trixie' 的 Proxmox VE 9.0.
+- 适用于基于 Debian 12 "bookworm" 的 Proxmox VE 8.x 和基于 Debian 13 "trixie" 的 Proxmox VE 9.0-1.
 - 理论上支持 Proxmox VE 7.x 等旧版环境但未经过实际测试. 您需要在拥有root权限的节点上运行该工具执行修改.
 - 在将脚本应用到实际环境之前, 最好先在测试环境进行测试, 若发生意外请通过下面的命令重新安装 pve-manager 来复原被修改的文件.
 ```
@@ -56,14 +56,24 @@ apt install --reinstall pve-manager
 - https://github.com/proxmox/pve-manager
 - https://github.com/Debian
 
+## 贡献者
+
+<a href="https://github.com/MiKing233/PVE-Manager-Status/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=MiKing233/PVE-Manager-Status" />
+</a>
+
 ## 许可证
 
 本项目为开源项目, 遵循 MIT License.
 
 这些代码按"原样"提供, 不提供任何担保, 也不授予任何权利. 您有责任安全地使用本工具, 并遵守软件许可协议的条款.
 
-## Buy me a coffee
+## 请我喝杯咖啡
 
-If you wish to donate me, please donate to (http://me.alipay.com/tqh975680379@gmail.com), it will be really lovely.
+如果您愿意支持这个项目, 每一份捐赠都将成为持续维护和发展的动力, 捐赠是本项目唯一的收入来源, 这将帮助该项目走得更远!感谢您的支持!
+- https://donate.mknetwork.net
 
-Enjoy a better ProxmoxVE experience!
+### 如果你喜欢这个项目, 请不要吝啬您的 Star 🌟
+[![Stargazers over time](https://starchart.cc/MiKing233/PVE-Manager-Status.svg?variant=adaptive)](https://starchart.cc/MiKing233/PVE-Manager-Status)
+
+Enjoy a better Proxmox VE experience!
