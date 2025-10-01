@@ -26,6 +26,14 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/MiKing233/PVE-Manager-St
 
 执行完毕后, 使用 Ctrl + F5 刷新浏览器 Proxmox VE Web 管理页面缓存.
 
+若此时可以看到 PVE-Manager-Status 带来的扩展的硬件监控信息, 但无法看到风扇转速信息, 你还需要继续执行以下步骤来安裝 IT87 系列传感器驱动包:
+
+```
+wget /root https://raw.githubusercontent.com/MiKing233/PVE-Manager-Status/master/it87-dkms_1.0.63-1_all.deb && apt install /root/it87-dkms_1.0.63-1_all.deb && rm -f /root/it87-dkms_1.0.63-1_all.deb
+```
+
+执行完毕后, 重启系统并再次检查风扇转速信息.
+
 ## 已知问题
 
 - SATA 硬盘监控的代码实现部分, 未经过任何形式的测试, 也许完全不起作用, 我目前没有能够使用 SATA 硬盘的 x86 设备无法对这部分进行测试.
@@ -61,6 +69,7 @@ apt install --reinstall pve-manager
 
 感谢以下来源和社区贡献, 本项目的诞生离不开源自这些来源和贡献:
 
+- https://github.com/a1wong/it87
 - https://github.com/shidahuilang/pve
 - https://github.com/xiangfeidexiaohuo/pve-diy
 - https://bbs.x86pi.com/thread?topicId=20
