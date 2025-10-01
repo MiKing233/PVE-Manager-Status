@@ -29,7 +29,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/MiKing233/PVE-Manager-St
 若此时可以看到 PVE-Manager-Status 带来的扩展的硬件监控信息, 但无法看到风扇转速信息, 你还需要继续执行以下步骤来安裝 IT87 系列传感器驱动包:
 
 ```
-wget /root https://raw.githubusercontent.com/MiKing233/PVE-Manager-Status/master/it87-dkms_1.0.63-1_all.deb && apt install /root/it87-dkms_1.0.63-1_all.deb && rm -f /root/it87-dkms_1.0.63-1_all.deb
+wget -O /root/it87-dkms_1.0.63-1_all.deb https://raw.githubusercontent.com/MiKing233/PVE-Manager-Status/master/it87-dkms_1.0.63-1_all.deb && apt install /root/it87-dkms_1.0.63-1_all.deb && rm -f /root/it87-dkms_1.0.63-1_all.deb
 ```
 
 执行完毕后, 重启系统并再次检查风扇转速信息.
