@@ -2,7 +2,7 @@
 # pve-manager-status.sh
 # Last Modified: 2025-10-05
 
-echo -e "\n🛠️ \033[1;33;41mPVE-Manager-Status v0.4.8 by MiKing233\033[0m"
+echo -e "\n🛠️ \033[1;33;41mPVE-Manager-Status v0.4.9 by MiKing233\033[0m"
 
 echo -e "为你的 ProxmoxVE 节点概要页面添加扩展的硬件监控信息"
 echo -e "OpenSource on GitHub (https://github.com/MiKing233/PVE-Manager-Status)\n"
@@ -66,7 +66,7 @@ apt-get install --reinstall -y pve-manager
 
 # 软件包依赖
 echo -e "\n🗃️ 检查依赖软件包安装情况..."
-packages=(sysstat lm-sensors smartmontools)
+packages=(sysstat lm-sensors smartmontools linux-cpupower)
 missing=()
 
 # 检查依赖状态
