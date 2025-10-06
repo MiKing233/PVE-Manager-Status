@@ -1,8 +1,8 @@
 #!/bin/bash
 # pve-manager-status.sh
-# Last Modified: 2025-10-05
+# Last Modified: 2025-10-06
 
-echo -e "\n🛠️ \033[1;33;41mPVE-Manager-Status v0.4.9 by MiKing233\033[0m"
+echo -e "\n🛠️ \033[1;33;41mPVE-Manager-Status v0.4.10 by MiKing233\033[0m"
 
 echo -e "为你的 ProxmoxVE 节点概要页面添加扩展的硬件监控信息"
 echo -e "OpenSource on GitHub (https://github.com/MiKing233/PVE-Manager-Status)\n"
@@ -165,6 +165,17 @@ if visudo -c -f "${TMP_SUDOERS}" &> /dev/null; then
     echo "已成功配置 sudo 规则于: ${SUDOERS_FILE} 🔐"
 else
     echo "sudoers 规则语法错误, 操作终止! ⛔"
+    echo -e "\n--- DEBUG INFO START ---"
+    echo "生成的 sudoers 规则内容如下:"
+    echo "--------------------------------------------------"
+    cat "${TMP_SUDOERS}"
+    echo "--------------------------------------------------"
+    echo
+    echo "visudo 语法检查的详细错误信息:"
+    echo "--------------------------------------------------"
+    visudo -c -f "${TMP_SUDOERS}"
+    echo "--------------------------------------------------"
+    echo -e "\n--- DEBUG INFO END ---"
     rm -f "${TMP_SUDOERS}"
     exit 1
 fi
@@ -898,6 +909,17 @@ sed -i "${ln}a\ textAlign: 'right'," $pvemanagerlib
 ####################   修改全部完成后重启服务   ####################
 
 echo -e "\n🔁 等待服务 pveproxy.service 重启..."
-systemctl restart pveproxy.service
+timeout 10s systemctl restart pveproxy.service &> /dev/null
+restart_status=$?
+if [ $restart_status -ne 0 ]; then
+    if [ $restart_status -eq 124 ]; then
+        echo -e "\n⛔ 重启服务 pveproxy.service 超时 (timeout 10s)"
+    else
+        echo -e "\n⛔ 重启服务 pveproxy.service 失败 ($restart_status)"
+    fi
+    echo -e "\n⚠️ 请检查服务状态信息以排查问题\n"
+    systemctl status pveproxy.service --no-pager
+    echo && exit 1
+fi
 
 echo -e "\n✅ 修改完成, 请使用 Ctrl + F5 刷新浏览器 Proxmox VE Web 管理页面缓存\n"
