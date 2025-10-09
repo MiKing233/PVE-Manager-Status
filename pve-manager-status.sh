@@ -1,8 +1,8 @@
 #!/bin/bash
 # pve-manager-status.sh
-# Last Modified: 2025-10-06
+# Last Modified: 2025-10-09
 
-echo -e "\n🛠️ \033[1;33;41mPVE-Manager-Status v0.4.10 by MiKing233\033[0m"
+echo -e "\n🛠️ \033[1;33;41mPVE-Manager-Status v0.5.0 by MiKing233\033[0m"
 
 echo -e "为你的 ProxmoxVE 节点概要页面添加扩展的硬件监控信息"
 echo -e "OpenSource on GitHub (https://github.com/MiKing233/PVE-Manager-Status)\n"
@@ -66,7 +66,7 @@ apt-get install --reinstall -y pve-manager
 
 # 软件包依赖
 echo -e "\n🗃️ 检查依赖软件包安装情况..."
-packages=(sysstat lm-sensors smartmontools linux-cpupower)
+packages=(sudo sysstat lm-sensors smartmontools linux-cpupower)
 missing=()
 
 # 检查依赖状态
@@ -177,10 +177,10 @@ else
     echo "--------------------------------------------------"
     echo -e "\n--- DEBUG INFO END ---"
     rm -f "${TMP_SUDOERS}"
-    exit 1
+    echo && exit 1
 fi
 
-# 确保 msr 模块被加载并设为开机自启，为 turbostat 提供支持
+# 确保 msr 模块被加载并设为开机自启, 为 turbostat 提供支持
 modprobe msr && echo msr > /etc/modules-load.d/turbostat-msr.conf
 
 
@@ -891,13 +891,77 @@ rm -f "$tmpf2"
 ####################   调整页面高度   ####################
 
 echo -e "正在调整页面高度: $pvemanagerlib..."
-disk_count=$(lsblk -d -o NAME | grep -cE 'sd[a-z]|nvme[0-9]')
-height_increase=$((disk_count * 300))
 
-node_status_new_height=$((400 + height_increase))
-sed -i -r '/widget\.pveNodeStatus/,+5{/height/{s#[0-9]+#'$node_status_new_height'#}}' $pvemanagerlib
-cpu_status_new_height=$((300 + height_increase))
-sed -i -r '/widget\.pveCpuStatus/,+5{/height/{s#[0-9]+#'$cpu_status_new_height'#}}' $pvemanagerlib
+# 基于模型: 每行内容 17px, 每个模块段落间额外 7px 间距
+calculate_height_increase() {
+    local total_lines=0
+    local module_count=0
+
+    # itemId:cpupower(CPU能耗): 固定1行
+    total_lines=$((total_lines + 1))
+    module_count=$((module_count + 1))
+
+    # itemId:cpufreq(CPU频率): 固定1行
+    total_lines=$((total_lines + 1))
+    module_count=$((module_count + 1))
+
+    # itemId:sensors(传感器): 主信息固定1行
+    total_lines=$((total_lines + 1))
+    module_count=$((module_count + 1))
+    # 使用 sensors 命令输出根据核心数量计算额外行数
+    local core_temp_count=$(sudo sensors 2>/dev/null | grep -c '^Core')
+    if [ "$core_temp_count" -gt 1 ]; then
+        local sensor_core_lines=$(((core_temp_count + 4 - 1) / 4))
+        total_lines=$((total_lines + sensor_core_lines))
+    fi
+
+    # itemId:corefreq(核心频率): 无固定行
+    module_count=$((module_count + 1))
+    # 根据 /proc/cpuinfo 输出的线程数量计算额外行数
+    local thread_count=$(grep -c ^processor /proc/cpuinfo)
+    if [ "$thread_count" -gt 0 ]; then
+        local core_freq_lines=$(((thread_count + 4 - 1) / 4))
+        total_lines=$((total_lines + core_freq_lines))
+    fi
+
+    # itemId:nvme0-status(NVMe硬盘): 无固定行
+    module_count=$((module_count + 1))
+    local nvme_count=$(lsblk -d -o NAME | grep -c 'nvme[0-9]')
+    if [ "$nvme_count" -gt 0 ]; then
+        # 第1个NVMe硬盘占4行, 后续每个占5行(含1行间距)
+        local nvme_lines=$((4 + (nvme_count - 1) * 5))
+        total_lines=$((total_lines + nvme_lines))
+    else
+        # 不存在NVMe硬盘时, 占用1行显示提示信息
+        total_lines=$((total_lines + 1))
+    fi
+
+    # itemId:sata_status(SATA硬盘): 无固定行
+    module_count=$((module_count + 1))
+    local sata_count=$(lsblk -d -o NAME | grep -c 'sd[a-z]')
+    if [ "$sata_count" -gt 0 ]; then
+        # 第1个SATA硬盘占2行, 后续每个占3行(含1行间距)
+        local sata_lines=$((2 + (sata_count - 1) * 3))
+        total_lines=$((total_lines + sata_lines))
+    else
+        # 不存在SATA硬盘时, 占用1行显示提示信息
+        total_lines=$((total_lines + 1))
+    fi
+
+    # 根据模型计算总高度增量: (行数 * 17px) + (模块数 * 7px)
+    local height_increase=$((total_lines * 17 + module_count * 7))
+    echo $height_increase
+}
+
+# 获取计算出的高度增量
+height_increase=$(calculate_height_increase)
+
+# 基于基础高度(350px)计算新高度
+new_height=$((350 + height_increase))
+
+# 使用 sed 命令定位并更新 PVE.node.StatusView 的 height 属性
+sed -i -E "/Ext.define\('PVE.node.StatusView'/,/height:/{s/height: *[0-9]+,/height: $new_height,/}" "$pvemanagerlib"
+echo "页面高度经计算模型已动态调整为 ${new_height}px ✅"
 
 ln=$(expr $(sed -n -e '/widget.pveDcGuests/=' $pvemanagerlib) + 10)
 sed -i "${ln}a\ textAlign: 'right'," $pvemanagerlib
