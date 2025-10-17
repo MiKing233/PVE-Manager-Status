@@ -1,15 +1,30 @@
 #!/bin/bash
 # pve-manager-status.sh
-# Last Modified: 2025-10-09
+# Last Modified: 2025-10-18
 
-echo -e "\n🛠️ \033[1;33;41mPVE-Manager-Status v0.5.0 by MiKing233\033[0m"
+echo -e "\n🛠️ \033[1;33;41mPVE-Manager-Status v0.5.1 by MiKing233\033[0m"
 
 echo -e "为你的 ProxmoxVE 节点概要页面添加扩展的硬件监控信息"
 echo -e "OpenSource on GitHub (https://github.com/MiKing233/PVE-Manager-Status)\n"
 
+# 先决条件执行判断
+# 执行用户判断, 必须为 root 用户执行
 if [ "$(id -u)" -ne 0 ]; then
-    echo -e "⛔ 请以 root 身份运行此脚本!\n"
-    exit 1
+    echo -e "⛔ 请以 root 身份运行此脚本!"
+    echo && exit 1
+fi
+
+# 执行环境判断, 必须为 Debian 发行版且存在 ProxmoxVE 环境
+if ! command -v pveversion &> /dev/null; then
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        if [[ "$ID" != "debian" && "$ID_LIKE" != *"debian"* ]]; then
+            echo -e "⛔ 检测到当前系统非 Debian 发行版, 执行终止!"
+            echo && exit 1
+        fi
+    fi
+    echo -e "⛔ 未检测到 ProxmoxVE 环境, 执行终止!"
+    echo && exit 1
 fi
 
 read -p "确认执行吗? [y/N]:" para
@@ -83,7 +98,11 @@ done
 # 安装缺失的包
 if [ ${#missing[@]} -ne 0 ]; then
     echo -e "\n📦 检查到软件包缺失: ${missing[*]} 开始安装..."
-    apt-get update && apt-get install -y "${missing[@]}"
+    if ! (apt-get update && apt-get install -y "${missing[@]}"); then
+        echo -e "\n⛔ 依赖软件包安装失败! 请检查你的 apt 源配置或网络连接"
+        echo && exit 1
+    fi
+    echo -e "✅ 依赖软件包已成功安装!"
 else
     echo -e "所有依赖软件包均已安装!"
 fi
