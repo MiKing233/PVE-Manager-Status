@@ -217,7 +217,7 @@ cat > "$tmpf1" << 'EOF'
         $res->{cpupower} = $cpumodes . $cpupowers;
 
         my $cpufreqs = `lscpu | grep MHz`;
-        my $threadfreqs = `cat /proc/cpuinfo | grep -i "cpu MHz"`;
+        my $threadfreqs = `sleep 0.2; cat /proc/cpuinfo | grep -i "cpu MHz"`;
         $res->{cpufreq} = $cpufreqs . $threadfreqs;
 
         $res->{sensors} = `sudo sensors`;
