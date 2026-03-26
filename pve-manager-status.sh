@@ -1,8 +1,8 @@
 #!/bin/bash
 # pve-manager-status.sh
-# Last Modified: 2025-10-28
+# Last Modified: 2026-03-26
 
-echo -e "\n🛠️ \033[1;33;41mPVE-Manager-Status v0.6.0 by MiKing233\033[0m"
+echo -e "\n🛠️ \033[1;33;41mPVE-Manager-Status v0.6.2 by MiKing233\033[0m"
 
 echo -e "为你的 ProxmoxVE 节点概要页面添加扩展的硬件监控信息"
 echo -e "OpenSource on GitHub (https://github.com/MiKing233/PVE-Manager-Status)\n"
@@ -19,18 +19,17 @@ if ! command -v pveversion &> /dev/null; then
     if [ -f /etc/os-release ]; then
         . /etc/os-release
         if [[ "$ID" != "debian" && "$ID_LIKE" != *"debian"* ]]; then
-            echo -e "⛔ 检测到当前系统非 Debian 发行版, 停止执行!"
+            echo -e "⛔ 检测到当前系统非 Debian 发行版, 终止执行!"
             echo && exit 1
         fi
     fi
-    echo -e "⛔ 未检测到 ProxmoxVE 环境, 停止执行!"
+    echo -e "⛔ 未检测到 ProxmoxVE 环境, 终止执行!"
     echo && exit 1
 fi
 
-read -p "确认执行吗? [y/N]:" para
-
 # 脚本执行前确认
-[[ "$para" =~ ^[Yy]$ ]] || { [[ "$para" =~ ^[Nn]$ ]] && echo -e "\n🚫 操作取消, 未执行任何操作!" && exit 0; echo -e "\n⚠️ 无效输入, 未执行任何操作!"; exit 1; }
+read -p "确认执行吗? [y/N]:" para
+[[ "$para" =~ ^[Yy]$ ]] || { [[ "$para" =~ ^[Nn]$ ]] && echo -e "\n🚫 操作取消, 未执行任何操作!\n" && exit 0; echo -e "\n⚠️ 无效输入, 未执行任何操作!\n"; exit 1; }
 
 nodes="/usr/share/perl5/PVE/API2/Nodes.pm"
 pvemanagerlib="/usr/share/pve-manager/js/pvemanagerlib.js"
@@ -38,11 +37,9 @@ pvever=$(pveversion | awk -F"/" '{print $2}')
 
 echo -e "\n⚙️ 当前 Proxmox VE 版本: $pvever"
 
+####################   配置文件备份步骤   ####################
 
-
-####################   备份步骤   ####################
-
-echo -e "\n💾 修改开始前备份原文件:"
+echo -e "\n💾 正在备份原文件:"
 
 delete_old_backups() {
     local pattern="$1"
@@ -71,34 +68,80 @@ echo "新备份生成: ${nodes}.${pvever}.bak ✅"
 cp "$pvemanagerlib" "${pvemanagerlib}.${pvever}.bak"
 echo "新备份生成: ${pvemanagerlib}.${pvever}.bak ✅"
 
+echo && sleep 0.5
 
+####################   修改前重装软件包避免重复修改   ####################
 
-####################   依赖检查 & 环境准备   ####################
+spinner() {
+    local pid=$1
+    local text="$2"
+    local delay=0.1
+    local spinstr='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
 
-# 避免重复修改, 重装 pve-manager
-echo -e "\n♻️ 避免重复修改, 重新安装 pve-manager..."
-apt-get install --reinstall -y pve-manager
+    while kill -0 "$pid" 2>/dev/null; do
+        for (( i=0; i<${#spinstr}; i++ )); do
+            printf "\r%s %s" "$text" "${spinstr:$i:1}"
+            sleep $delay
+        done
+    done
+
+    printf "\r%s " "$text"
+}
+
+echo -e "♻️ 正在重装相关软件包:"
+
+reinstall_packages=(pve-manager pve-i18n)
+reinstall_failed=()
+
+for pkg in "${reinstall_packages[@]}"; do
+    text="正在重装 $pkg:"
+
+    apt-get install --reinstall -y "$pkg" >/dev/null 2>&1 &
+    pid=$!
+
+    spinner "$pid" "$text"
+
+    wait $pid
+    if [ $? -eq 0 ]; then
+        echo "已重装 ✅"
+    else
+        echo "重装失败 ⛔"
+        reinstall_failed+=("$pkg")
+    fi
+done
+
+# 最终结果判断
+if [ ${#reinstall_failed[@]} -ne 0 ]; then
+    echo -e "\n⛔ 软件包重装失败! 请检查你的 apt 源配置或网络连接"
+    echo && exit 1
+else
+    echo -e "相关软件包已重装完成!"
+fi
+
+echo && sleep 0.5
+
+####################   软件包依赖检查   ####################
 
 # 软件包依赖
-echo -e "\n🗃️ 检查依赖软件包安装情况..."
-packages=(sudo sysstat lm-sensors smartmontools linux-cpupower)
-missing=()
+echo -e "🗃️ 正在检查依赖软件包:"
+dep_packages=(sudo sysstat lm-sensors smartmontools linux-cpupower)
+dep_missing=()
 
 # 检查依赖状态
 installed_list=$(apt list --installed 2>/dev/null)
-for pkg in "${packages[@]}"; do
+for pkg in "${dep_packages[@]}"; do
     if echo "$installed_list" | grep -q "^$pkg/"; then
-        echo "$pkg: 已安装✅"
+        echo "$pkg: 已安装 ✅"
     else
-        echo "$pkg: 未安装⛔"
-        missing+=("$pkg")
+        echo "$pkg: 未安装 ⛔"
+        dep_missing+=("$pkg")
     fi
 done
 
 # 安装缺失的包
-if [ ${#missing[@]} -ne 0 ]; then
-    echo -e "\n📦 检查到软件包缺失: ${missing[*]} 开始安装..."
-    if ! (apt-get update && apt-get install -y "${missing[@]}"); then
+if [ ${#dep_missing[@]} -ne 0 ]; then
+    echo -e "\n📦 检查到软件包缺失: ${dep_missing[*]} 开始安装..."
+    if ! (apt-get update && apt-get install -y "${dep_missing[@]}"); then
         echo -e "\n⛔ 依赖软件包安装失败! 请检查你的 apt 源配置或网络连接"
         echo && exit 1
     fi
@@ -107,14 +150,17 @@ else
     echo -e "所有依赖软件包均已安装!"
 fi
 
-# 配置传感器模块
-echo -e "\n🧰 开始配置传感器模块..."
+echo && sleep 0.5
+
+####################   配置设备传感器模块   ####################
+
+echo -e "🧰 正在配置设备传感器模块:"
 sensors-detect --auto > /tmp/sensors
 
 drivers=$(sed -n '/Chip drivers/,/\#----cut here/p' /tmp/sensors | sed '/Chip /d;/cut/d')
 
 if [ -n "$drivers" ]; then
-    echo "发现传感器模块, 正在配置以便开机自动加载"
+    echo "发现传感器模块, 正在配置开机自动加载"
     for drv in $drivers; do
         modprobe "$drv"
         if grep -qx "$drv" /etc/modules; then
@@ -131,7 +177,7 @@ if [ -n "$drivers" ]; then
     else
         echo "未找到 /etc/init.d/kmod 跳过此步骤 ➡️"
     fi
-    echo "传感器模块已配置完成!"
+    echo "设备传感器模块已配置完成!"
 elif grep -q "No modules to load, skipping modules configuration" /tmp/sensors; then
     echo "未找到需要手动加载的模块, 跳过配置步骤 (可能已由内核自动加载) ➡️"
 elif grep -q "Sorry, no sensors were detected" /tmp/sensors; then
@@ -142,8 +188,14 @@ fi
 
 rm -f /tmp/sensors
 
-# 配置必要的执行权限 (替代危险的 chmod +s)
-echo -e "\n🔩 配置必要的执行权限..."
+# 确保 msr 模块被加载并设为开机自启, 为 turbostat 提供支持
+modprobe msr && echo msr > /etc/modules-load.d/turbostat-msr.conf
+
+echo && sleep 0.5
+
+####################   配置 sudo 执行权限   ####################
+
+echo -e "🔩 正在配置必要的执行权限:"
 echo -e "允许 www-data 用户以 sudo 权限执行特定监控命令"
 SUDOERS_FILE="/etc/sudoers.d/pve-manager-status"
 # 首先移除可能被添加的 SUID 权限设置, 以防曾经被其它监控脚本添加
@@ -199,14 +251,11 @@ else
     echo && exit 1
 fi
 
-# 确保 msr 模块被加载并设为开机自启, 为 turbostat 提供支持
-modprobe msr && echo msr > /etc/modules-load.d/turbostat-msr.conf
-
-
+echo && sleep 0.5
 
 ####################   概要页面监控功能实现   ####################
 
-echo -e "\n📋 添加概要页面硬件监控信息..."
+echo -e "📋 正在添加概要页面监控功能:"
 
 # 修改 node.pm 文件前置步骤
 tmpf1=$(mktemp /tmp/pve-manager-status.XXXXXX) || exit 1
@@ -246,7 +295,8 @@ EOF
 if ! grep -q 'PVE::pvecfg::version_text' "$nodes"; then
     echo "⛔ 在 $nodes 中未找到锚点, 操作终止!"
     rm -f "$tmpf1"
-    echo -e "⚠️ 锚点'PVE::pvecfg::version_text', 文件可能已更新或与当前版本不兼容\n" && exit 1
+    echo -e "⚠️ 锚点'PVE::pvecfg::version_text', 文件可能已更新或与当前版本不兼容"
+    echo && exit 1
 fi
 
 # 应用更改
@@ -258,12 +308,11 @@ if grep -q 'cpupower' "$nodes"; then
 else
     echo "⛔ 检查对 $nodes 添加的内容未生效!"
     rm -f "$tmpf1"
-    echo -e "⚠️ 请检查文件权限或手动检查文件内容\n" && exit 1
+    echo -e "⚠️ 请检查文件权限或手动检查文件内容"
+    echo && exit 1
 fi
 
 rm -f "$tmpf1"
-
-
 
 # 修改 pvemanagerlib.js 文件前置步骤
 tmpf2=$(mktemp /tmp/pve-manager-status.XXXXXX) || exit 1
@@ -952,7 +1001,8 @@ ln=$(sed -n '/pveversion/,+10{/},/{=;q}}' $pvemanagerlib)
 if ! [[ "$ln" =~ ^[0-9]+$ ]]; then
     echo "⛔ 在 $pvemanagerlib 中计算插入位置失败, 操作终止!"
     rm -f "$tmpf2"
-    echo -e "⚠️ 锚点'pveversion', 文件可能已更新或与当前版本不兼容\n" && exit 1
+    echo -e "⚠️ 锚点'pveversion', 文件可能已更新或与当前版本不兼容"
+    echo && exit 1
 fi
 
 # 应用更改
@@ -964,70 +1014,196 @@ if grep -q "itemId: 'cpupower'" "$pvemanagerlib"; then
 else
     echo "⛔ 检查对 $pvemanagerlib 添加的内容未生效!"
     rm -f "$tmpf2"
-    echo -e "⚠️ 请检查文件权限或手动检查文件内容\n" && exit 1
+    echo -e "⚠️ 请检查文件权限或手动检查文件内容"
+    echo && exit 1
 fi
 
 rm -f "$tmpf2"
 
 
 
+# 强制概要页面监控信息右对齐
+patch_widgets=(
+    "widget.pveDcGuests"
+    "widget.pveNodeStatus"
+)
+
+for widget_alias in "${patch_widgets[@]}"; do
+    # 寻找起始行
+    start_line=$(sed -n "/$widget_alias/=" "$pvemanagerlib" | head -n1)
+
+    [ -z "$start_line" ] && echo "错误: 修补点不存在 ($widget_alias) ⛔ " && continue
+
+    # 在目标后20行内寻找关键字
+    rel_line=$(sed -n "$((start_line)),+$((20))p" "$pvemanagerlib" \
+        | sed -n "/width: '100%'/=" \
+        | head -n1)
+
+    [ -z "$rel_line" ] && echo "错误: 未找到关键字 ($widget_alias) ⛔ " && continue
+
+    target_line=$((start_line + rel_line - 1))
+
+    # 检查是否已经存在
+    next_line=$(sed -n "$((target_line+1))p" "$pvemanagerlib")
+
+    if echo "$next_line" | grep -q "^[[:space:]]*textAlign: 'right',"; then
+        echo "警告: 修补点已存在 ($widget_alias) ⚠️"
+        continue
+    fi
+
+    # 插入更改
+    sed -i "${target_line}a\\$(sed -n "${target_line}s/^\([[:space:]]*\).*/\1/p" "$pvemanagerlib")textAlign: 'right'," "$pvemanagerlib"
+
+done
+
+echo && sleep 0.5
+
 ####################   zh-CN 本地化   ####################
 
-echo -e "\n🌏 添加缺失的 zh-CN 翻译..."
+echo -e "🌏 正在完善 zh-CN 中文本地化:"
 
 pve_major_ver=$(echo "$pvever" | cut -d'.' -f1)
+pve_i18n_CN="/usr/share/pve-i18n/pve-lang-zh_CN.js"
 
 case "$pve_major_ver" in
     "8")
-        # PVE 8.x: 为 Network traffic 图表添加中文 fieldTitles
-        if ! grep -q "fields: \['netin', 'netout'\]" "$pvemanagerlib"; then
-            echo -e "⛔ 未找到 Network traffic 的锚点, 操作终止!"
-            echo -e "⚠️ 锚点 \"fields: ['netin', 'netout']\", 文件可能已更新或与当前版本不兼容\n" && exit 1
-        else
-            if grep -q "fieldTitles: \[gettext('传入'), gettext('发送')\]" "$pvemanagerlib"; then
-                echo -e "Network traffic 的中文翻译已存在, 跳过该步骤 ➡️"
-            else
-                sed -i "s/^\( *\)fields: \['netin', 'netout'\],/&\n\1fieldTitles: [gettext('传入'), gettext('发送')],/" "$pvemanagerlib"
-                if grep -q "fieldTitles: \[gettext('传入'), gettext('发送')\]" "$pvemanagerlib"; then
-                    echo -e "已添加 PVE 8.x 缺失的翻译: 网络流量 图表上的 (传入)和(发送)按钮 ✅"
-                else
-                    echo -e "⛔ 检查对 Network traffic 部分的中文 fieldTitles 修改未生效!"
-                    echo -e "⚠️ 请检查文件权限或手动检查文件内容\n" && exit 1
-                fi
-            fi
-        fi
+        # PVE 8: 添加缺失的中文翻译项目
+        echo -e "正在检查并补全 PVE 8 缺失的中文翻译..."
 
-        # PVE 8.x: 为 Disk IO 图表添加中文 fieldTitles
-        if ! grep -q "fields: \['diskread', 'diskwrite'\]" "$pvemanagerlib"; then
-            echo -e "⛔ 未找到 Disk IO 的锚点, 操作终止!"
-            echo -e "⚠️ 锚点 \"fields: ['diskread', 'diskwrite']\", 文件可能已更新或与当前版本不兼容\n" && exit 1
-        else
-            if grep -q "fieldTitles: \[gettext('读取'), gettext('写入')\]" "$pvemanagerlib"; then
-                echo -e "Disk IO 的中文翻译已存在, 跳过该步骤 ➡️"
+        PVE8_TRANSLATIONS=(
+            '"599449289":["传入"]'
+            '"669411099":["发送"]'
+        )
+
+        # 前置锚点检查
+        if ! grep -q "^__proxmox_i18n_msgcat__ =" "$pve_i18n_CN"; then
+            echo -e "⛔ 未找到翻译字典中的锚点 (__proxmox_i18n_msgcat__ =), 操作终止!"
+            echo -e "⚠️ 文件可能已更新或与当前版本不兼容."
+            echo && exit 1
+        fi
+        
+        # 开始逐条处理翻译项目
+        for item in "${PVE8_TRANSLATIONS[@]}"; do
+            # 提取哈希值作为唯一检查标识
+            hash_id=$(echo "$item" | cut -d'"' -f2)
+            # 提取中文翻译文本用于日志输出
+            zh_text=$(echo "$item" | cut -d'"' -f4)
+
+            # 首先检查哈希值在字典中是否已经存在
+            if grep -q "\"$hash_id\":" "$pve_i18n_CN"; then
+                echo -e "已存在 PVE 8 中缺失的中文翻译: [$hash_id] => $zh_text ➡️"
             else
-                sed -i "s/^\( *\)fields: \['diskread', 'diskwrite'\],/&\n\1fieldTitles: [gettext('读取'), gettext('写入')],/" "$pvemanagerlib"
-                if grep -q "fieldTitles: \[gettext('读取'), gettext('写入')\]" "$pvemanagerlib"; then
-                    echo -e "已添加 PVE 8.x 缺失的翻译: 磁盘IO 图表上的 (读取)和(写入)按钮 ✅"
+                # 开始执行单次插入
+                # 在 }; 前插入一个逗号, 加上当前项目后再闭合 };
+                sed -i "/^__proxmox_i18n_msgcat__ =/ s/};$/,${item}\};/" "$pve_i18n_CN"
+                
+                # 完成后验证插入结果
+                if grep -q "\"$hash_id\":" "$pve_i18n_CN"; then
+                    echo -e "已添加 PVE 8 中缺失的中文翻译: [$hash_id] => $zh_text ✅"
                 else
-                    echo -e "⛔ 检查对 Disk IO 部分的中文 fieldTitles 修改未生效!"
-                    echo -e "⚠️ 请检查文件权限或手动检查文件内容\n" && exit 1
+                    echo -e "未生效 PVE 8 中缺失的中文翻译: [$hash_id] => $zh_text ⛔"
                 fi
             fi
-        fi
+        done
+
+        # PVE 8: 补全缺失的fieldTitles
+        patch_titles=(
+            "netin netout|Incoming Outgoing"
+            "diskread diskwrite|Reads Writes"
+        )
+
+        for item in "${patch_titles[@]}"; do
+            IFS='|' read -r fields_en titles_en <<< "$item"
+            read -r f1 f2 <<< "$fields_en"
+            read -r t1 t2 <<< "$titles_en"
+
+            fields_anchor="fields: ['$f1', '$f2']"
+            titles_insert="fieldTitles: [gettext('$t1'), gettext('$t2')]"
+
+            fields_label="$f1/$f2"
+
+            # 前置锚点检查
+            if ! grep -Fq "$fields_anchor" "$pvemanagerlib"; then
+                echo -e "⛔ 未找到 $fields_label 的锚点, 操作终止!"
+                echo -e "⚠️ 锚点 \"fields: ['$f1', '$f2']\", 文件可能已更新或与当前版本不兼容."
+                echo && exit 1
+            fi
+
+            # 检查fieldTitles在文件中是否已经存在
+            if grep -Fq "$titles_insert" "$pvemanagerlib"; then
+                echo -e "$fields_label 图表按钮的中文翻译已被修正, 跳过该步骤 ➡️"
+                continue
+            fi
+
+            # 执行插入操作
+            sed -i "s/^\([[:space:]]*\)fields: \['$f1', '$f2'\],/&\n\1$titles_insert,/" "$pvemanagerlib"
+
+            # 完成后验证插入结果
+            if grep -Fq "$titles_insert" "$pvemanagerlib"; then
+                echo -e "已添加 PVE 8 中缺失的字段标题: $fields_label => $t1/$t2 ✅"
+            else
+                echo -e "未生效 PVE 8 中缺失的字段标题: $fields_label => $t1/$t2 ⛔"
+            fi
+        done
         ;;
     "9")
-        echo -e "PVE 9.X 的 zh-CN 本地化将在未来的版本中支持, 跳过该步骤 ➡️"
+        # PVE 9: 添加缺失的中文翻译项目
+        echo -e "正在检查并补全 PVE 9 缺失的中文翻译..."
+
+        PVE9_TRANSLATIONS=(
+            '"1208454600":["平均"]'
+            '"1653956129":["最大"]'
+            '"871356310":["服务器负载"]'
+            '"1299201244":["网络流量"]'
+            '"755456338":["CPU 压力阻塞"]'
+            '"858045066":["IO 压力阻塞"]'
+            '"431218371":["内存压力阻塞"]'
+            '"1102487829":["内存使用率"]'
+            '"517429357":["主机内存用量"]'
+            '"1075229421":["主机内存用量"]'
+        )
+
+        # 全局前置检查：确保翻译字典的锚点行确实存在
+        if ! grep -q "^__proxmox_i18n_msgcat__ =" "$pve_i18n_CN"; then
+            echo -e "⛔ 未找到翻译字典中的锚点 (__proxmox_i18n_msgcat__ =), 操作终止!"
+            echo -e "⚠️ 文件可能已更新或与当前版本不兼容."
+            echo && exit 1
+        fi
+        
+        # 开始逐条处理翻译项目
+        for item in "${PVE9_TRANSLATIONS[@]}"; do
+            # 提取哈希值作为唯一检查标识
+            hash_id=$(echo "$item" | cut -d'"' -f2)
+            # 提取中文翻译文本用于日志输出
+            zh_text=$(echo "$item" | cut -d'"' -f4)
+
+            # 首先检查哈希值在字典中是否已经存在
+            if grep -q "\"$hash_id\":" "$pve_i18n_CN"; then
+                echo -e "已存在 PVE 9 中缺失的中文翻译: [$hash_id] => $zh_text ➡️"
+            else
+                # 开始执行单次插入
+                # 在 }; 前插入一个逗号, 加上当前项目后再闭合 };
+                sed -i "/^__proxmox_i18n_msgcat__ =/ s/};$/,${item}\};/" "$pve_i18n_CN"
+                
+                # 完成后验证插入结果
+                if grep -q "\"$hash_id\":" "$pve_i18n_CN"; then
+                    echo -e "已添加 PVE 9 中缺失的中文翻译: [$hash_id] => $zh_text ✅"
+                else
+                    echo -e "未生效 PVE 9 中缺失的中文翻译: [$hash_id] => $zh_text ⛔"
+                fi
+            fi
+        done
         ;;
     *)
-        echo -e "\n⚠️ 不支持的PVE版本($pvever), 跳过 zh-CN 本地化."
+        echo -e "⚠️ 不支持的PVE版本 ($pvever) 跳过 zh-CN 本地化."
         ;;
 esac
 
-
+echo && sleep 0.5
 
 ####################   调整页面高度   ####################
 
-echo -e "\n🎚️ 调整修改后的页面高度..."
+echo -e "🎚️ 正在动态调整修改后的页面高度:"
 
 # 基于模型: 每行内容 17px, 每个模块段落间额外 7px 间距
 calculate_height_increase() {
@@ -1096,16 +1272,11 @@ new_height=$((350 + height_increase))
 sed -i -E "/Ext.define\('PVE.node.StatusView'/,/height:/{s/height: *[0-9]+,/height: $new_height,/}" "$pvemanagerlib"
 echo "页面高度经计算模型已动态调整为 ${new_height}px ✅"
 
-ln=$(expr $(sed -n -e '/widget.pveDcGuests/=' $pvemanagerlib) + 10)
-sed -i "${ln}a\ textAlign: 'right'," $pvemanagerlib
-ln=$(expr $(sed -n -e '/widget.pveNodeStatus/=' $pvemanagerlib) + 10)
-sed -i "${ln}a\ textAlign: 'right'," $pvemanagerlib
-
-
+echo && sleep 0.5
 
 ####################   修改全部完成后重启服务   ####################
 
-echo -e "\n🔁 等待服务 pveproxy.service 重启..."
+echo -e "🔁 等待服务 pveproxy.service 重启..."
 timeout 10s systemctl restart pveproxy.service &> /dev/null
 restart_status=$?
 if [ $restart_status -ne 0 ]; then
