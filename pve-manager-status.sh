@@ -218,9 +218,9 @@ read -r -d '' SUDOERS_CONTENT << EOM
 # Allow www-data user (PVE Web GUI) to run specific hardware monitoring commands
 # This file is managed by pve-manager-status.sh (https://github.com/MiKing233/PVE-Manager-Status)
 
-Cmnd_Alias PVE_Manager_Status = ${SENSORS_PATH}, ${TURBOSTAT_PATH}, ${SMARTCTL_PATH}, ${IOSTAT_PATH}
-Defaults!PVE_Manager_Status !log_allowed
-Defaults!PVE_Manager_Status !pam_session
+Cmnd_Alias PVE_MANAGER_STATUS = ${SENSORS_PATH}, ${TURBOSTAT_PATH}, ${SMARTCTL_PATH}, ${IOSTAT_PATH}
+Defaults!PVE_MANAGER_STATUS !log_allowed
+Defaults!PVE_MANAGER_STATUS !pam_session
 
 www-data ALL=(root) NOPASSWD: ${SENSORS_PATH}
 www-data ALL=(root) NOPASSWD: ${TURBOSTAT_PATH} -S -q -s PkgWatt -i 0.1 -n 1 -c package
