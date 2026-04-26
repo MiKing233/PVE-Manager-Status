@@ -1,8 +1,8 @@
 #!/bin/bash
 # pve-manager-status.sh
-# Last Modified: 2026-03-26
+# Last Modified: 2026-04-26
 
-echo -e "\n🛠️ \033[1;33;41mPVE-Manager-Status v0.6.2 by MiKing233\033[0m"
+echo -e "\n🛠️ \033[1;33;41mPVE-Manager-Status v0.6.3 by MiKing233\033[0m"
 
 echo -e "为你的 ProxmoxVE 节点概要页面添加扩展的硬件监控信息"
 echo -e "OpenSource on GitHub (https://github.com/MiKing233/PVE-Manager-Status)\n"
@@ -207,10 +207,10 @@ for bin in "${binaries[@]}"; do
 done
 
 # 定义需要 sudo 权限执行命令的绝对路径
-IOSTAT_PATH=$(command -v iostat)
 SENSORS_PATH=$(command -v sensors)
-SMARTCTL_PATH=$(command -v smartctl)
 TURBOSTAT_PATH=$(command -v turbostat)
+SMARTCTL_PATH=$(command -v smartctl)
+IOSTAT_PATH=$(command -v iostat)
 
 # 配置 sudoers 规则内容
 echo -e "正在配置 sudoers 规则内容并进行语法检查..."
@@ -218,10 +218,15 @@ read -r -d '' SUDOERS_CONTENT << EOM
 # Allow www-data user (PVE Web GUI) to run specific hardware monitoring commands
 # This file is managed by pve-manager-status.sh (https://github.com/MiKing233/PVE-Manager-Status)
 
+Cmnd_Alias PVE_Manager_Status = ${SENSORS_PATH}, ${TURBOSTAT_PATH}, ${SMARTCTL_PATH}, ${IOSTAT_PATH}
+Defaults!PVE_Manager_Status !log_allowed
+Defaults!PVE_Manager_Status !pam_session
+
 www-data ALL=(root) NOPASSWD: ${SENSORS_PATH}
+www-data ALL=(root) NOPASSWD: ${TURBOSTAT_PATH} -S -q -s PkgWatt -i 0.1 -n 1 -c package
 www-data ALL=(root) NOPASSWD: ${SMARTCTL_PATH} -a /dev/*
 www-data ALL=(root) NOPASSWD: ${IOSTAT_PATH} -d -x -k 1 1
-www-data ALL=(root) NOPASSWD: ${TURBOSTAT_PATH} -S -q -s PkgWatt -i 0.1 -n 1 -c package
+
 EOM
 
 # 使用 visudo 在最终添加前对 sudoers 规则执行语法检查
@@ -1151,16 +1156,16 @@ case "$pve_major_ver" in
         echo -e "正在检查并补全 PVE 9 缺失的中文翻译..."
 
         PVE9_TRANSLATIONS=(
-            '"1208454600":["平均"]'
-            '"1653956129":["最大"]'
+            '"1208454600":["平均值"]'
+            '"1653956129":["最大值"]'
             '"871356310":["服务器负载"]'
             '"1299201244":["网络流量"]'
-            '"755456338":["CPU 压力阻塞"]'
-            '"858045066":["IO 压力阻塞"]'
-            '"431218371":["内存压力阻塞"]'
+            '"755456338":["CPU 压力停滞"]'
+            '"858045066":["IO 压力停滞"]'
+            '"431218371":["内存压力停滞"]'
             '"1102487829":["内存使用率"]'
-            '"517429357":["主机内存用量"]'
-            '"1075229421":["主机内存用量"]'
+            '"517429357":["主机内存使用量"]'
+            '"1075229421":["主机内存使用量"]'
         )
 
         # 全局前置检查：确保翻译字典的锚点行确实存在
