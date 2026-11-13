@@ -66,11 +66,23 @@ delete_old_backups "${pvemanagerlib}.*.bak" "pvemanagerlib"
 delete_old_backups "${pve_i18n_CN}.*.bak" "pve_i18n_CN"
 
 echo -e "备份当前将要被修改的文件..."
-cp "$nodes" "${nodes}.${pvever}.bak"
+
+cp "$nodes" "${nodes}.${pvever}.bak" || {
+    echo "⛔ 备份失败: $nodes"
+    exit 1
+}
 echo "新备份生成: ${nodes}.${pvever}.bak ✅"
-cp "$pvemanagerlib" "${pvemanagerlib}.${pvever}.bak"
+
+cp "$pvemanagerlib" "${pvemanagerlib}.${pvever}.bak" || {
+    echo "⛔ 备份失败: $pvemanagerlib"
+    exit 1
+}
 echo "新备份生成: ${pvemanagerlib}.${pvever}.bak ✅"
-cp "$pve_i18n_CN" "${pve_i18n_CN}.${pvever}.bak"
+
+cp "$pve_i18n_CN" "${pve_i18n_CN}.${pvever}.bak" || {
+    echo "⛔ 备份失败: $pve_i18n_CN"
+    exit 1
+}
 echo "新备份生成: ${pve_i18n_CN}.${pvever}.bak ✅"
 
 echo && sleep 0.5
