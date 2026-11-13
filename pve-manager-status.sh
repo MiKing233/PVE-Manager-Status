@@ -1,8 +1,8 @@
 #!/bin/bash
 # pve-manager-status.sh
-# Last Modified: 2026-04-26
+# Last Modified: 2026-11-14
 
-echo -e "\n🛠️ \033[1;33;41mPVE-Manager-Status v0.6.3 by MiKing233\033[0m"
+echo -e "\n🛠️ \033[1;33;41mPVE-Manager-Status v0.6.4 by MiKing233\033[0m"
 
 echo -e "为你的 ProxmoxVE 节点概要页面添加扩展的硬件监控信息"
 echo -e "OpenSource on GitHub (https://github.com/MiKing233/PVE-Manager-Status)\n"
@@ -33,7 +33,9 @@ read -p "确认执行吗? [y/N]:" para
 
 nodes="/usr/share/perl5/PVE/API2/Nodes.pm"
 pvemanagerlib="/usr/share/pve-manager/js/pvemanagerlib.js"
+pve_i18n_CN="/usr/share/pve-i18n/pve-lang-zh_CN.js"
 pvever=$(pveversion | awk -F"/" '{print $2}')
+pve_major_ver=$(echo "$pvever" | cut -d'.' -f1)
 
 echo -e "\n⚙️ 当前 Proxmox VE 版本: $pvever"
 
@@ -61,12 +63,15 @@ delete_old_backups() {
 echo -e "清理旧的备份文件..."
 delete_old_backups "${nodes}.*.bak" "nodes"
 delete_old_backups "${pvemanagerlib}.*.bak" "pvemanagerlib"
+delete_old_backups "${pve_i18n_CN}.*.bak" "pve_i18n_CN"
 
 echo -e "备份当前将要被修改的文件..."
 cp "$nodes" "${nodes}.${pvever}.bak"
 echo "新备份生成: ${nodes}.${pvever}.bak ✅"
 cp "$pvemanagerlib" "${pvemanagerlib}.${pvever}.bak"
 echo "新备份生成: ${pvemanagerlib}.${pvever}.bak ✅"
+cp "$pve_i18n_CN" "${pve_i18n_CN}.${pvever}.bak"
+echo "新备份生成: ${pve_i18n_CN}.${pvever}.bak ✅"
 
 echo && sleep 0.5
 
@@ -103,7 +108,7 @@ for pkg in "${reinstall_packages[@]}"; do
 
     wait $pid
     if [ $? -eq 0 ]; then
-        echo "已重装 ✅"
+        echo "已完成 ✅"
     else
         echo "重装失败 ⛔"
         reinstall_failed+=("$pkg")
@@ -330,15 +335,15 @@ cat > "$tmpf2" << 'EOF'
             textField: 'cpupower',
             renderer:function(value){
                 function colorizeCpuMode(mode) {
-                    if (mode === 'powersave') return `<span style="color:green; font-weight:bold;">${mode}</span>`;
-                    if (mode === 'performance') return `<span style="color:red; font-weight:bold;">${mode}</span>`;
-                    return `<span style="color:orange; font-weight:bold;">${mode}</span>`;
+                    if (mode === 'powersave') return `<span style="color:var(--pve-manager-status-low); font-weight:bold;">${mode}</span>`;
+                    if (mode === 'performance') return `<span style="color:var(--pve-manager-status-high); font-weight:bold;">${mode}</span>`;
+                    return `<span style="color:var(--pve-manager-status-medium); font-weight:bold;">${mode}</span>`;
                 }
                 function colorizeCpuPower(power) {
                     const powerNum = parseFloat(power);
-                    if (powerNum < 20) return `<span style="color:green; font-weight:bold;">${power} W</span>`;
-                    if (powerNum < 50) return `<span style="color:orange; font-weight:bold;">${power} W</span>`;
-                    return `<span style="color:red; font-weight:bold;">${power} W</span>`;
+                    if (powerNum < 20) return `<span style="color:var(--pve-manager-status-low); font-weight:bold;">${power} W</span>`;
+                    if (powerNum < 50) return `<span style="color:var(--pve-manager-status-medium); font-weight:bold;">${power} W</span>`;
+                    return `<span style="color:var(--pve-manager-status-high); font-weight:bold;">${power} W</span>`;
                 }
                 const w0 = value.split('\n')[0].split(' ')[0];
                 const w1 = value.split('\n')[1].split(' ')[0];
@@ -354,9 +359,9 @@ cat > "$tmpf2" << 'EOF'
             renderer:function(value){
                 function colorizeCpuFreq(freq) {
                     const freqNum = parseFloat(freq);
-                    if (freqNum < 1500) return `<span style="color:green; font-weight:bold;">${freq} MHz</span>`;
-                    if (freqNum < 3000) return `<span style="color:orange; font-weight:bold;">${freq} MHz</span>`;
-                    return `<span style="color:red; font-weight:bold;">${freq} MHz</span>`;
+                    if (freqNum < 1500) return `<span style="color:var(--pve-manager-status-low); font-weight:bold;">${freq} MHz</span>`;
+                    if (freqNum < 3000) return `<span style="color:var(--pve-manager-status-medium); font-weight:bold;">${freq} MHz</span>`;
+                    return `<span style="color:var(--pve-manager-status-high); font-weight:bold;">${freq} MHz</span>`;
                 }
                 const f0 = value.match(/cpu MHz.*?([\d]+)/)[1];
                 const f1 = value.match(/CPU min MHz.*?([\d]+)/)[1];
@@ -373,27 +378,27 @@ cat > "$tmpf2" << 'EOF'
             renderer: function(value) {
                 function colorizeCpuTemp(temp) {
                     const tempNum = parseFloat(temp);
-                    if (tempNum < 60) return `<span style="color:green; font-weight:bold;">${temp}°C</span>`;
-                    if (tempNum < 80) return `<span style="color:orange; font-weight:bold;">${temp}°C</span>`;
-                    return `<span style="color:red; font-weight:bold;">${temp}°C</span>`;
+                    if (tempNum < 60) return `<span style="color:var(--pve-manager-status-low); font-weight:bold;">${temp}°C</span>`;
+                    if (tempNum < 80) return `<span style="color:var(--pve-manager-status-medium); font-weight:bold;">${temp}°C</span>`;
+                    return `<span style="color:var(--pve-manager-status-high); font-weight:bold;">${temp}°C</span>`;
                 }
                 function colorizeGpuTemp(temp) {
                     const tempNum = parseFloat(temp);
-                    if (tempNum < 60) return `<span style="color:green; font-weight:bold;">${temp}°C</span>`;
-                    if (tempNum < 80) return `<span style="color:orange; font-weight:bold;">${temp}°C</span>`;
-                    return `<span style="color:red; font-weight:bold;">${temp}°C</span>`;
+                    if (tempNum < 60) return `<span style="color:var(--pve-manager-status-low); font-weight:bold;">${temp}°C</span>`;
+                    if (tempNum < 80) return `<span style="color:var(--pve-manager-status-medium); font-weight:bold;">${temp}°C</span>`;
+                    return `<span style="color:var(--pve-manager-status-high); font-weight:bold;">${temp}°C</span>`;
                 }
                 function colorizeAcpiTemp(temp) {
                     const tempNum = parseFloat(temp);
-                    if (tempNum < 60) return `<span style="color:green; font-weight:bold;">${temp}°C</span>`;
-                    if (tempNum < 80) return `<span style="color:orange; font-weight:bold;">${temp}°C</span>`;
-                    return `<span style="color:red; font-weight:bold;">${temp}°C</span>`;
+                    if (tempNum < 60) return `<span style="color:var(--pve-manager-status-low); font-weight:bold;">${temp}°C</span>`;
+                    if (tempNum < 80) return `<span style="color:var(--pve-manager-status-medium); font-weight:bold;">${temp}°C</span>`;
+                    return `<span style="color:var(--pve-manager-status-high); font-weight:bold;">${temp}°C</span>`;
                 }
                 function colorizeFanRpm(rpm) {
                     const rpmNum = parseFloat(rpm);
-                    if (rpmNum < 1500) return `<span style="color:green; font-weight:bold;">${rpm}转/分钟</span>`;
-                    if (rpmNum < 3000) return `<span style="color:orange; font-weight:bold;">${rpm}转/分钟</span>`;
-                    return `<span style="color:red; font-weight:bold;">${rpm}转/分钟</span>`;
+                    if (rpmNum < 1500) return `<span style="color:var(--pve-manager-status-low); font-weight:bold;">${rpm}转/分钟</span>`;
+                    if (rpmNum < 3000) return `<span style="color:var(--pve-manager-status-medium); font-weight:bold;">${rpm}转/分钟</span>`;
+                    return `<span style="color:var(--pve-manager-status-high); font-weight:bold;">${rpm}转/分钟</span>`;
                 }
                 value = value.replace(/Â/g, '');
                 let data = [];
@@ -586,9 +591,9 @@ cat > "$tmpf2" << 'EOF'
             renderer: function(value) {
                 function colorizeCpuFreq(freq) {
                     const freqNum = parseFloat(freq);
-                    if (freqNum < 1500) return `<span style="color:green; font-weight:bold;">${freq} MHz</span>`;
-                    if (freqNum < 3000) return `<span style="color:orange; font-weight:bold;">${freq} MHz</span>`;
-                    return `<span style="color:red; font-weight:bold;">${freq} MHz</span>`;
+                    if (freqNum < 1500) return `<span style="color:var(--pve-manager-status-low); font-weight:bold;">${freq} MHz</span>`;
+                    if (freqNum < 3000) return `<span style="color:var(--pve-manager-status-medium); font-weight:bold;">${freq} MHz</span>`;
+                    return `<span style="color:var(--pve-manager-status-high); font-weight:bold;">${freq} MHz</span>`;
                 }
                 const freqMatches = value.matchAll(/^cpu MHz\s*:\s*([\d\.]+)/gm);
                 const frequencies = [];
@@ -626,9 +631,9 @@ for x in {0..9}; do
             renderer:function(value){
                 function getSsdLifeColor(life) {
                     const lifeNum = parseFloat(life);
-                    if (lifeNum < 50) return 'red';
-                    if (lifeNum < 80) return 'orange';
-                    return 'green';
+                    if (lifeNum < 50) return 'var(--pve-manager-status-high)';
+                    if (lifeNum < 80) return 'var(--pve-manager-status-medium)';
+                    return 'var(--pve-manager-status-low)';
                 }
                 function colorizeSsdModel(model, life) {
                     const color = getSsdLifeColor(life);
@@ -640,27 +645,27 @@ for x in {0..9}; do
                 }
                 function colorizeSsdTemp(temp) {
                     const tempNum = parseFloat(temp);
-                    if (tempNum < 50) return \`<span style="color:green; font-weight:bold;">\${temp}°C</span>\`;
-                    if (tempNum < 70) return \`<span style="color:orange; font-weight:bold;">\${temp}°C</span>\`;
-                    return \`<span style="color:red; font-weight:bold;">\${temp}°C</span>\`;
+                    if (tempNum < 50) return \`<span style="color:var(--pve-manager-status-low); font-weight:bold;">\${temp}°C</span>\`;
+                    if (tempNum < 70) return \`<span style="color:var(--pve-manager-status-medium); font-weight:bold;">\${temp}°C</span>\`;
+                    return \`<span style="color:var(--pve-manager-status-high); font-weight:bold;">\${temp}°C</span>\`;
                 }
                 function colorizeSsdLoad(load) {
                     const loadNum = parseFloat(load);
-                    if (loadNum < 50) return \`<span style="color:green; font-weight:bold;">\${load}%</span>\`;
-                    if (loadNum < 80) return \`<span style="color:orange; font-weight:bold;">\${load}%</span>\`;
-                    return \`<span style="color:red; font-weight:bold;">\${load}%</span>\`;
+                    if (loadNum < 50) return \`<span style="color:var(--pve-manager-status-low); font-weight:bold;">\${load}%</span>\`;
+                    if (loadNum < 80) return \`<span style="color:var(--pve-manager-status-medium); font-weight:bold;">\${load}%</span>\`;
+                    return \`<span style="color:var(--pve-manager-status-high); font-weight:bold;">\${load}%</span>\`;
                 }
                 function colorizeIoSpeed(speed) {
                     const speedNum = parseFloat(speed);
-                    if (speedNum > 1000) return \`<span style="color:red; font-weight:bold;">\${speed}MB/s</span>\`;
-                    if (speedNum < 100) return \`<span style="color:green; font-weight:bold;">\${speed}MB/s</span>\`;
-                    return \`<span style="color:orange; font-weight:bold;">\${speed}MB/s</span>\`;
+                    if (speedNum > 1000) return \`<span style="color:var(--pve-manager-status-high); font-weight:bold;">\${speed}MB/s</span>\`;
+                    if (speedNum < 100) return \`<span style="color:var(--pve-manager-status-low); font-weight:bold;">\${speed}MB/s</span>\`;
+                    return \`<span style="color:var(--pve-manager-status-medium); font-weight:bold;">\${speed}MB/s</span>\`;
                 }
                 function colorizeIoLatency(latency) {
                     const latencyNum = parseFloat(latency);
-                    if (latencyNum > 10) return \`<span style="color:red; font-weight:bold;">\${latency}ms</span>\`;
-                    if (latencyNum < 1) return \`<span style="color:green; font-weight:bold;">\${latency}ms</span>\`;
-                    return \`<span style="color:orange; font-weight:bold;">\${latency}ms</span>\`;
+                    if (latencyNum > 10) return \`<span style="color:var(--pve-manager-status-high); font-weight:bold;">\${latency}ms</span>\`;
+                    if (latencyNum < 1) return \`<span style="color:var(--pve-manager-status-low); font-weight:bold;">\${latency}ms</span>\`;
+                    return \`<span style="color:var(--pve-manager-status-medium); font-weight:bold;">\${latency}ms</span>\`;
                 }
                 if (value.length > 0) {
                     value = value.replace(/Â/g, '');
@@ -918,9 +923,9 @@ cat >> "$tmpf2" << 'EOF'
             renderer: function(value) {
                 function colorizeHddTemp(temp) {
                     const tempNum = parseFloat(temp);
-                    if (tempNum < 40) return `<span style="color:green; font-weight:bold;">${temp}°C</span>`;
-                    if (tempNum < 50) return `<span style="color:orange; font-weight:bold;">${temp}°C</span>`;
-                    return `<span style="color:red; font-weight:bold;">${temp}°C</span>`;
+                    if (tempNum < 40) return `<span style="color:var(--pve-manager-status-low); font-weight:bold;">${temp}°C</span>`;
+                    if (tempNum < 50) return `<span style="color:var(--pve-manager-status-medium); font-weight:bold;">${temp}°C</span>`;
+                    return `<span style="color:var(--pve-manager-status-high); font-weight:bold;">${temp}°C</span>`;
                 }
                 if (value.length > 0) {
                 try {
@@ -1013,6 +1018,38 @@ fi
 # 应用更改
 sed -i "${ln}r $tmpf2" "$pvemanagerlib"
 
+# 支援跟隨 PVE 當前主題切换配色
+cat >> "$pvemanagerlib" << 'EOF'
+
+;(() => {
+    const style = document.createElement('style');
+    style.id = 'pve-manager-status-colors';
+    // Light theme
+    style.textContent = `
+        :root {
+            --pve-manager-status-low: #008000;
+            --pve-manager-status-medium: #ffa500;
+            --pve-manager-status-high: #ff0000;
+        }
+    `;
+    // Proxmox Dark
+    const darkTheme = document.querySelector('link[rel="stylesheet"][href*="/theme-proxmox-dark.css"]');
+    if (darkTheme && !darkTheme.disabled) {
+        const darkColors = `
+            :root {
+                --pve-manager-status-low: #167d3f;
+                --pve-manager-status-medium: #edb34b;
+                --pve-manager-status-high: #ce3c3c;
+            }
+        `;
+        style.textContent += darkTheme.media
+            ? `@media ${darkTheme.media} { ${darkColors} }`
+            : darkColors;
+    }
+    document.head.appendChild(style);
+})();
+EOF
+
 # 验证修改是否成功
 if grep -q "itemId: 'cpupower'" "$pvemanagerlib"; then
     echo "已完成修改: $pvemanagerlib ✅"
@@ -1066,9 +1103,6 @@ echo && sleep 0.5
 ####################   zh-CN 本地化   ####################
 
 echo -e "🌏 正在完善 zh-CN 中文本地化:"
-
-pve_major_ver=$(echo "$pvever" | cut -d'.' -f1)
-pve_i18n_CN="/usr/share/pve-i18n/pve-lang-zh_CN.js"
 
 case "$pve_major_ver" in
     "8")
@@ -1281,8 +1315,14 @@ echo && sleep 0.5
 
 ####################   修改全部完成后重启服务   ####################
 
-echo -e "🔁 等待服务 pveproxy.service 重启..."
-timeout 10s systemctl restart pveproxy.service &> /dev/null
+text="🔁 正在重启 pveproxy.service:"
+
+timeout 10s systemctl restart pveproxy.service &> /dev/null &
+pid=$!
+
+spinner "$pid" "$text"
+
+wait "$pid"
 restart_status=$?
 if [ $restart_status -ne 0 ]; then
     if [ $restart_status -eq 124 ]; then
@@ -1294,5 +1334,25 @@ if [ $restart_status -ne 0 ]; then
     systemctl status pveproxy.service --no-pager
     echo && exit 1
 fi
+echo "已完成 ✅" && sleep 0.5
 
-echo -e "\n✅ 修改完成, 请使用 Ctrl + F5 刷新浏览器 Proxmox VE Web 管理页面缓存\n"
+####################   Rollback 命令生成   ####################
+
+rollback_commands=()
+
+for file in "$nodes" "$pvemanagerlib" "$pve_i18n_CN"; do
+    if ! cmp -s "$file" "${file}.${pvever}.bak"; then
+        rollback_commands+=("cp '${file}.${pvever}.bak' '$file'")
+    fi
+done
+
+echo -e "\n✅ 修改完成, 如需回滚本次修改请执行以下命令:\n"
+
+if [ ${#rollback_commands[@]} -gt 0 ]; then
+    printf -v rollback_cmd '%s && ' "${rollback_commands[@]}"
+    echo "${rollback_cmd}systemctl restart pveproxy.service"
+else
+    echo -e "♻️ 在本次修改中文件内容均未发生变更."
+fi
+
+echo -e "\n♻️ 请使用 Ctrl + Shift + R 刷新浏览器 Proxmox VE Web 管理页面缓存\n"
