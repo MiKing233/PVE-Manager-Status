@@ -98,6 +98,6 @@ apt install --reinstall pve-manager pve-i18n
 - https://donate.mknetwork.net
 
 ### 如果你喜欢这个项目, 请不要吝啬您的 Star 🌟
-[![Stargazers over time](https://starchart.cc/MiKing233/PVE-Manager-Status.svg?variant=adaptive)](https://starchart.cc/MiKing233/PVE-Manager-Status)
+[![Star History Chart](https://api.star-history.com/chart?repos=miking233/pve-manager-status&type=date&legend=bottom-right)](https://www.star-history.com/?repos=miking233%2Fpve-manager-status&type=date&releases=&legend=bottom-right)
 
 Enjoy a better Proxmox VE experience!
