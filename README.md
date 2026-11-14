@@ -23,7 +23,7 @@ PVE-Manager-Status 是一款强大的开源脚本工具, 通过实时基于动�
 若要安装最新版本, 请通过 ssh 以 root 身份连接你的 Proxmox VE 节点, 并执行以下操作:
 
 ```
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/MiKing233/PVE-Manager-Status/master/pve-manager-status.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/MiKing233/PVE-Manager-Status/main/pve-manager-status.sh)"
 ```
 
 执行完毕后, 使用 Ctrl + F5 刷新浏览器 Proxmox VE Web 管理页面缓存.
@@ -36,7 +36,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/MiKing233/PVE-Manager-St
 对于使用 IT87 系列传感器的设备, 使用以下命令安装传感器驱动包 it87-dkms_1.0.63-1_all.deb
 
 ```
-wget -O /root/it87-dkms_1.0.63-1_all.deb https://raw.githubusercontent.com/MiKing233/PVE-Manager-Status/master/it87-dkms_1.0.63-1_all.deb && apt install /root/it87-dkms_1.0.63-1_all.deb && rm -f /root/it87-dkms_1.0.63-1_all.deb
+wget -O /root/it87-dkms_1.0.63-1_all.deb https://raw.githubusercontent.com/MiKing233/PVE-Manager-Status/main/it87-dkms_1.0.63-1_all.deb && apt install /root/it87-dkms_1.0.63-1_all.deb && rm -f /root/it87-dkms_1.0.63-1_all.deb
 ```
 
 安装完成后, 重启系统并再次检查风扇转速信息.
