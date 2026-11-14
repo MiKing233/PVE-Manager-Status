@@ -1,6 +1,5 @@
 #!/bin/bash
 # pve-manager-status.sh
-# Last Modified: 2026-11-15
 
 SCRIPT_VERSION="v0.7.0"
 
@@ -1044,18 +1043,34 @@ cat > "$tmpf3" << 'EOF'
                         latest: null,
                         error: false,
                         checking: false,
-                        lastCheck: 0,
+                        nextCheck: 0,
                     });
 
-                // 僅從用戶訪問端浏览器中執行异步查询, 避免阻塞节点状态请求
-                if (!state.checking && Date.now() - state.lastCheck >= 86400000) {
+                // 僅從用戶端浏览器异步查询, 並根據檢查結果決定快取與重試時間
+                if (!state.checking && Date.now() >= state.nextCheck) {
                     state.checking = true;
-                    state.lastCheck = Date.now();
+                    let retryDelay = 60000;
+
                     fetch('https://api.github.com/repos/MiKing233/PVE-Manager-Status/releases/latest', {
                         signal: AbortSignal.timeout(10000),
                     })
                         .then(response => {
-                            if (!response.ok) throw new Error('GitHub API request failed');
+                            if (!response.ok) {
+                                if (response.status === 403 || response.status === 429) {
+                                    const retryAfter = Number(response.headers.get('Retry-After')) || 0;
+                                    const remaining = response.headers.get('X-RateLimit-Remaining');
+                                    const resetTime = remaining === '0'
+                                        ? Number(response.headers.get('X-RateLimit-Reset')) * 1000 - Date.now() + 1000
+                                        : 0;
+                                    retryDelay = Math.max(600000, retryAfter * 1000, resetTime);
+                                } else if (response.status >= 500 || response.status === 408) {
+                                    retryDelay = 300000;
+                                } else {
+                                    retryDelay = 86400000;
+                                }
+                                throw new Error('GitHub API request failed');
+                            }
+                            retryDelay = 300000;
                             return response.json();
                         })
                         .then(release => {
@@ -1064,9 +1079,11 @@ cat > "$tmpf3" << 'EOF'
                             }
                             state.latest = release.tag_name;
                             state.error = false;
+                            state.nextCheck = Date.now() + 86400000;
                         })
                         .catch(() => {
                             state.error = true;
+                            state.nextCheck = Date.now() + retryDelay;
                         })
                         .finally(() => {
                             state.checking = false;
