@@ -1,8 +1,10 @@
 #!/bin/bash
 # pve-manager-status.sh
-# Last Modified: 2026-11-14
+# Last Modified: 2026-11-15
 
-echo -e "\n🛠️ \033[1;33;41mPVE-Manager-Status v0.6.4 by MiKing233\033[0m"
+SCRIPT_VERSION="v0.7.0"
+
+echo -e "\n🛠️ \033[1;33;41mPVE-Manager-Status ${SCRIPT_VERSION} by MiKing233\033[0m"
 
 echo -e "为你的 ProxmoxVE 节点概要页面添加扩展的硬件监控信息"
 echo -e "OpenSource on GitHub (https://github.com/MiKing233/PVE-Manager-Status)\n"
@@ -293,6 +295,9 @@ cat > "$tmpf1" << 'EOF'
 
         $res->{sensors} = `sudo sensors`;
 EOF
+
+# 将當前已安装版本写入节点状态 API
+printf "        \$res->{pve_manager_status_version} = '%s';\n" "$SCRIPT_VERSION" >> "$tmpf1"
 
 for x in {0..9}; do
     for dev in "/dev/nvme${x}" "/dev/nvme${x}n1"; do
@@ -1016,6 +1021,104 @@ cat >> "$tmpf2" << 'EOF'
         },
 EOF
 
+tmpf3=$(mktemp /tmp/pve-manager-status.XXXXXX) || exit 1
+cat > "$tmpf3" << 'EOF'
+
+        // 從 v0.7.0 開始為後續版本引入自動檢查更新功能
+        me.items = me.items.concat({
+            xtype: 'pmxInfoWidget',
+            itemId: 'pveManagerStatusVersion',
+            colspan: 2,
+            printBar: false,
+            title: '扩展项版本',
+            textField: 'pve_manager_status_version',
+            renderer: function(version) {
+                this.currentVersion = version;
+                const versionText = ' | PVE-Manager-Status ' + version +
+                    ' <a data-qtip="查看当前版本 Release on Github" href="https://github.com/MiKing233/PVE-Manager-Status/releases/tag/' +
+                    encodeURIComponent(version) +
+                    '" target="_blank" rel="noopener noreferrer">' +
+                    '<i class="fa black fa-chevron-right txt-shadow-hover"></i></a>';
+                const state = window.pveManagerStatusReleaseCheck ||
+                    (window.pveManagerStatusReleaseCheck = {
+                        latest: null,
+                        error: false,
+                        checking: false,
+                        lastCheck: 0,
+                    });
+
+                // 僅從用戶訪問端浏览器中執行异步查询, 避免阻塞节点状态请求
+                if (!state.checking && Date.now() - state.lastCheck >= 86400000) {
+                    state.checking = true;
+                    state.lastCheck = Date.now();
+                    fetch('https://api.github.com/repos/MiKing233/PVE-Manager-Status/releases/latest', {
+                        signal: AbortSignal.timeout(10000),
+                    })
+                        .then(response => {
+                            if (!response.ok) throw new Error('GitHub API request failed');
+                            return response.json();
+                        })
+                        .then(release => {
+                            if (!/^v\d+\.\d+\.\d+$/.test(release.tag_name)) {
+                                throw new Error('Invalid release version');
+                            }
+                            state.latest = release.tag_name;
+                            state.error = false;
+                        })
+                        .catch(() => {
+                            state.error = true;
+                        })
+                        .finally(() => {
+                            state.checking = false;
+                            Ext.ComponentQuery.query('#pveManagerStatusVersion').forEach(item => {
+                                item.updateValue(item.renderer.call(item, item.currentVersion));
+                            });
+                        });
+                }
+
+                if (!/^v\d+\.\d+\.\d+$/.test(version)) return '版本信息不可用';
+                if (state.error) {
+                    return '⛔ <span style="color:var(--pve-manager-status-high); font-weight:bold;">检查更新失败</span>' + versionText;
+                }
+                if (!state.latest) return '🔍 检查更新中...' + versionText;
+
+                const current = version.slice(1).split('.').map(Number);
+                const latest = state.latest.slice(1).split('.').map(Number);
+                for (let i = 0; i < 3; i++) {
+                    if (current[i] < latest[i]) {
+                        const url = 'https://github.com/MiKing233/PVE-Manager-Status/releases/tag/' + state.latest;
+                        return '⚠️ <a href="' + url + '" target="_blank" rel="noopener noreferrer" style="color:var(--pve-manager-status-medium); font-weight:bold;">新版更新可用</a>' + versionText;
+                    }
+                    if (current[i] > latest[i]) {
+                        return '🛠️ <span style="color:var(--pve-manager-status-medium); font-weight:bold;">开发预览版本</span>' + versionText;
+                    }
+                }
+                return '✅ <span style="color:var(--pve-manager-status-low); font-weight:bold;">已是最新版本</span>' + versionText;
+            },
+        });
+EOF
+
+# 查找插入位置
+repo_end_line=$(awk "/itemId: 'repositoryStatus'/ { found=1 } found && /^[[:space:]]*}\);/ { print NR; exit }" "$pvemanagerlib")
+
+# 验证插入位置
+if ! [[ "$repo_end_line" =~ ^[0-9]+$ ]]; then
+    echo "⛔ 在 $pvemanagerlib 中未找到存储库状态项结束位置, 操作终止!"
+    rm -f "$tmpf3"
+    echo && exit 1
+fi
+
+# 应用更改
+sed -i "${repo_end_line}r $tmpf3" "$pvemanagerlib"
+
+# 验证修改是否成功
+if ! grep -q "itemId: 'pveManagerStatusVersion'" "$pvemanagerlib"; then
+    echo "⛔ 检查更新状态项目插入失败!"
+    echo && exit 1
+fi
+
+rm -f "$tmpf3"
+
 # 计算插入行号
 ln=$(sed -n '/pveversion/,+10{/},/{=;q}}' $pvemanagerlib)
 
@@ -1307,6 +1410,10 @@ calculate_height_increase() {
         # 不存在SATA硬盘时, 占用1行显示提示信息
         total_lines=$((total_lines + 1))
     fi
+
+    # itemId:pveManagerStatusVersion(版本更新): 固定1行
+    total_lines=$((total_lines + 1))
+    module_count=$((module_count + 1))
 
     # 根据模型计算总高度增量: (行数 * 17px) + (模块数 * 7px)
     local height_increase=$((total_lines * 17 + module_count * 7))
