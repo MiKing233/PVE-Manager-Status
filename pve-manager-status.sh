@@ -1152,9 +1152,9 @@ cat >> "$pvemanagerlib" << 'EOF'
     if (darkTheme && !darkTheme.disabled) {
         const darkColors = `
             :root {
-                --pve-manager-status-low: #167d3f;
-                --pve-manager-status-medium: #edb34b;
-                --pve-manager-status-high: #ce3c3c;
+                --pve-manager-status-low: #3A7D6A;
+                --pve-manager-status-medium: #C28B2C;
+                --pve-manager-status-high: #C45B5B;
             }
         `;
         style.textContent += darkTheme.media
