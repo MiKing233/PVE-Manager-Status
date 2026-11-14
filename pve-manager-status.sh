@@ -1057,12 +1057,21 @@ cat > "$tmpf3" << 'EOF'
                         .then(response => {
                             if (!response.ok) {
                                 if (response.status === 403 || response.status === 429) {
-                                    const retryAfter = Number(response.headers.get('Retry-After')) || 0;
+                                    const retryAfterHeader = response.headers.get('Retry-After');
+                                    const retryAfterSeconds = Number(retryAfterHeader);
+                                    const retryAfter = Number.isFinite(retryAfterSeconds)
+                                        ? retryAfterSeconds * 1000
+                                        : Date.parse(retryAfterHeader) - Date.now();
                                     const remaining = response.headers.get('X-RateLimit-Remaining');
-                                    const resetTime = remaining === '0'
-                                        ? Number(response.headers.get('X-RateLimit-Reset')) * 1000 - Date.now() + 1000
+                                    const reset = Number(response.headers.get('X-RateLimit-Reset'));
+                                    const resetTime = remaining === '0' && Number.isFinite(reset)
+                                        ? reset * 1000 - Date.now() + 1000
                                         : 0;
-                                    retryDelay = Math.max(600000, retryAfter * 1000, resetTime);
+                                    retryDelay = Math.max(
+                                        600000,
+                                        Number.isFinite(retryAfter) ? retryAfter : 0,
+                                        Number.isFinite(resetTime) ? resetTime : 0,
+                                    );
                                 } else if (response.status >= 500 || response.status === 408) {
                                     retryDelay = 300000;
                                 } else {
